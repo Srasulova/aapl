@@ -2,6 +2,10 @@
 
 A React-based dashboard that displays and analyzes Apple Inc.'s financial data. Built with Next.js and Tailwind CSS.
 
+## Live Demo
+
+Visit the live application: [https://aapl-chi.vercel.app/](https://aapl-chi.vercel.app/)
+
 ## Features
 
 - Display financial metrics in a responsive table
