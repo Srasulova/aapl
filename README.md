@@ -25,13 +25,13 @@ A React-based dashboard that displays and analyzes Apple Inc.'s financial data. 
 1. Clone the repository:
 
 ```bash
-git clone [your-repository-url]
+git clone https://github.com/Srasulova/aapl.git
 ```
 
 2. Navigate to the project directory:
 
 ```bash
-cd [project-directory]
+cd aapl
 ```
 
 3. Install dependencies:
