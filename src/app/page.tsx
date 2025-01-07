@@ -1,101 +1,207 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+
+interface FinancialData {
+  date: string;
+  revenue: number;
+  netIncome: number;
+  grossProfit: number;
+  eps: number;
+  operatingIncome: number;
+}
+
+interface FilterState {
+  startYear: string;
+  endYear: string;
+  minRevenue: string;
+  maxRevenue: string;
+  minNetIncome: string;
+  maxNetIncome: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [data, setData] = useState<FinancialData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterState>({
+    startYear: '',
+    endYear: '',
+    minRevenue: '',
+    maxRevenue: '',
+    minNetIncome: '',
+    maxNetIncome: '',
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/financial-data', {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const jsonData = await response.json() as FinancialData[];
+        const uniqueData = Array.from(
+          new Map(jsonData.map((item: FinancialData) => [item.date, item])).values()
+        );
+        setData(uniqueData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const filteredData = data.filter(item => {
+    const year = new Date(item.date).getFullYear();
+    const matchesYear = (!filters.startYear || year >= parseInt(filters.startYear)) &&
+      (!filters.endYear || year <= parseInt(filters.endYear));
+
+    const matchesRevenue = (!filters.minRevenue || item.revenue >= parseInt(filters.minRevenue)) &&
+      (!filters.maxRevenue || item.revenue <= parseInt(filters.maxRevenue));
+
+    const matchesNetIncome = (!filters.minNetIncome || item.netIncome >= parseInt(filters.minNetIncome)) &&
+      (!filters.maxNetIncome || item.netIncome <= parseInt(filters.maxNetIncome));
+
+    return matchesYear && matchesRevenue && matchesNetIncome;
+  });
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  return (
+    <div className="min-h-screen p-8">
+      <main className="max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">Apple Inc. Financial Data</h1>
+
+        {/* Filter Controls */}
+        {!loading && !error && (
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow">
+            <div className="space-y-2">
+              <h3 className="font-semibold">Date Range</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  name="startYear"
+                  placeholder="Start Year"
+                  value={filters.startYear}
+                  onChange={handleFilterChange}
+                  min="0"
+                  className="w-full px-3 py-2 border rounded"
+                />
+                <input
+                  type="number"
+                  name="endYear"
+                  placeholder="End Year"
+                  value={filters.endYear}
+                  onChange={handleFilterChange}
+                  min="0"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold">Revenue Range (USD)</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  name="minRevenue"
+                  placeholder="Min Revenue"
+                  value={filters.minRevenue}
+                  onChange={handleFilterChange}
+                  className="w-full px-3 py-2 border rounded"
+                />
+                <input
+                  type="number"
+                  name="maxRevenue"
+                  placeholder="Max Revenue"
+                  value={filters.maxRevenue}
+                  onChange={handleFilterChange}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold">Net Income Range (USD)</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  name="minNetIncome"
+                  placeholder="Min Net Income"
+                  value={filters.minNetIncome}
+                  onChange={handleFilterChange}
+                  className="w-full px-3 py-2 border rounded"
+                />
+                <input
+                  type="number"
+                  name="maxNetIncome"
+                  placeholder="Max Net Income"
+                  value={filters.maxNetIncome}
+                  onChange={handleFilterChange}
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {loading && <p>Loading...</p>}
+        {error && <p className="text-red-500">Error: {error}</p>}
+
+        {!loading && !error && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Income</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Profit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EPS</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operating Income</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredData.map((item) => (
+                  <tr key={item.date}>
+                    <td className="px-6 py-4 whitespace-nowrap">{item.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.revenue)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.netIncome)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.grossProfit)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">${item.eps}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.operatingIncome)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
