@@ -20,6 +20,11 @@ interface FilterState {
   maxNetIncome: string;
 }
 
+interface SortConfig {
+  field: keyof FinancialData | null;
+  direction: 'asc' | 'desc';
+}
+
 export default function Home() {
   const [data, setData] = useState<FinancialData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +36,10 @@ export default function Home() {
     maxRevenue: '',
     minNetIncome: '',
     maxNetIncome: '',
+  });
+  const [sort, setSort] = useState<SortConfig>({
+    field: 'date',
+    direction: 'desc'
   });
 
   useEffect(() => {
@@ -84,11 +93,31 @@ export default function Home() {
     return matchesYear && matchesRevenue && matchesNetIncome;
   });
 
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sort.field) return 0;
+
+    const aValue = a[sort.field];
+    const bValue = b[sort.field];
+
+    if (sort.direction === 'asc') {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+    } else {
+      return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
+    }
+  });
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleSort = (field: keyof FinancialData) => {
+    setSort(prevSort => ({
+      field,
+      direction: prevSort.field === field && prevSort.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
 
@@ -174,31 +203,71 @@ export default function Home() {
         {error && <p className="text-red-500">Error: {error}</p>}
 
         {!loading && !error && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Income</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Profit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EPS</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operating Income</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredData.map((item) => (
-                  <tr key={item.date}>
-                    <td className="px-6 py-4 whitespace-nowrap">{item.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.revenue)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.netIncome)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.grossProfit)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">${item.eps}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.operatingIncome)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="relative">
+            <div className="overflow-x-auto shadow-md sm:rounded-lg">
+              <div className="inline-block min-w-full align-middle">
+                <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      <th
+                        onClick={() => handleSort('date')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      >
+                        Date
+                        {sort.field === 'date' && (
+                          <span className="ml-2">
+                            {sort.direction === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </th>
+                      <th
+                        onClick={() => handleSort('revenue')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      >
+                        Revenue
+                        {sort.field === 'revenue' && (
+                          <span className="ml-2">
+                            {sort.direction === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </th>
+                      <th
+                        onClick={() => handleSort('netIncome')}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      >
+                        Net Income
+                        {sort.field === 'netIncome' && (
+                          <span className="ml-2">
+                            {sort.direction === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Gross Profit
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        EPS
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Operating Income
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedData.map((item) => (
+                      <tr key={item.date} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(item.revenue)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(item.netIncome)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(item.grossProfit)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.eps}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(item.operatingIncome)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </main>
